@@ -33,6 +33,9 @@ const LinearAxis = ({
   marginTop = 10,
   marginBottom = 10,
   secondaryAxis = false,
+  axisWidth = 1,
+  axisColor = 'black',
+  axisStyle = 'solid',
 }) => {
   const { dt } = useContext(DataContext);
 
@@ -50,23 +53,31 @@ const LinearAxis = ({
 
   const xAxisData = getAxisDataSeries(x);
   const yAxisData = getAxisDataSeries(y);
+  const xMin = xAxisData.min();
+  const xMax = xAxisData.max();
+  const yMin = yAxisData.min();
+  const yMax = yAxisData.max();
+
+  // Calculate the x-axis position
 
   const xAxisLine = {
     x1: marginLeft,
-    y1: marginTop,
-    x2: marginLeft, // replace with actual length based on scale
-    y2: marginTop,
-    color: 'black', // replace with axis color based on theme or prop
-    width: 1, // replace with axis line width based on prop
+    y1: xPosition === 'bottom' ? canvasHeight - marginBottom : marginTop,
+    x2: canvasWidth - marginRight,
+    y2: xPosition === 'bottom' ? canvasHeight - marginBottom : marginTop,
+    color: axisColor,
+    width: axisWidth,
+    style: axisStyle,
   };
 
   const yAxisLine = {
-    x1: 0,
-    y1: 0,
-    x2: 0,
-    y2: 100, // replace with actual length based on scale
-    color: 'black', // replace with axis color based on theme or prop
-    width: 1, // replace with axis line width based on prop
+    x1: yPosition === 'left' ? marginLeft : canvasWidth - marginRight,
+    y1: marginTop,
+    x2: yPosition === 'left' ? marginLeft : canvasWidth - marginRight,
+    y2: canvasHeight - marginBottom,
+    color: axisColor,
+    width: axisWidth,
+    style: axisStyle,
   };
 
   return (

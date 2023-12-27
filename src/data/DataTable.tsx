@@ -5,7 +5,7 @@ import DataSeries, { dtypeTypes } from './DataSeries';
 interface DataTableProps {
   values: DataSeries[];
   columns?: string[];
-  index?: string[];
+  index?: any[] | null;
   shape?: number[];
   className?: string;
 }
@@ -15,7 +15,7 @@ interface DataTableProps {
  * @description A class representing a table of data
  * @param {DataSeries[]} values - An array of DataSeries objects
  * @param {string[]} columns - An array of column names
- * @param {string[]} index - An array of index values
+ * @param {any[] | null} index - An array of index values
  * @property {DataSeries[]} values - An array of DataSeries objects
  * @property {string[]} columns - An array of column names
  * @property {string[]} index - An array of index values
@@ -42,10 +42,10 @@ interface DataTableProps {
 class DataTable {
   values: DataSeries[];
   columns: string[];
-  index: string[];
+  index: any[] | null = [];
   shape: number[];
 
-  constructor(values: DataSeries[], columns: string[] = [], index?: string[]) {
+  constructor(values: DataSeries[], columns: string[] = [], index: any[] = []) {
     // ensure each element of the values array is a DataSeries
     if (values.length === 0) {
       throw new Error('Values array must not be empty');
@@ -63,11 +63,11 @@ class DataTable {
     }
 
     // if an index was not passed, ensure all values have the same index array, and if not, reset all of them to the default
-    if (index === null) {
+    if (index === null || index.length === 0) {
       const indices = values.map((v) => v.index);
 
       // test if all indices are elementwise equal
-      const cond = (i, j) => i === j;
+      const cond = (i: any, j: any) => i === j;
       const indicesEqual = indices.every((i) =>
         indices.every((j) => cond(i, j)),
       );
@@ -107,23 +107,25 @@ class DataTable {
         throw new Error(
           'Columns array must be the same length as the values array',
         );
+      } else {
+        // ensure all values have the same type
+        const types = values.map((v) => v.dtype);
+        if (types.some((t) => t !== types[0])) {
+          throw new Error('All DataSeries must have the same type');
+        }
+
+        // set the columns to the passed columns
+        this.columns = columns;
       }
     }
 
-    // for each column, give the class a property with the column name that returns the DataSeries
-    //      70 | // for each column, give the class a property with the column name that returns the DataSeries
-    // > 71 | this.columns.forEach((c, i) => {
-    //      |^
-    //   72 |   this[c] = values[i];
-    //   73 | });
-    //   74 |
-    // THIS.COLUMNS IS UNDEFINED
-    this.columns.forEach((c, i) => {
-      this[c] = values[i];
-    });
-
     // set the values array
     this.values = values;
+
+    // set the index if it hasn't already been set
+    if (this.index === null) {
+      this.index = index === null ? values[0].index : index;
+    }
 
     // set the shape
     this.shape = [this.nRows, this.nCols];
@@ -163,19 +165,18 @@ class DataTable {
     return this.values[index];
   }
 
-  /**
-   * @method {df}
-   * @description Returns a copy of the DataTable
-   * @returns {DataTable} - A copy of the DataTable
-   */
-  df(): DataTable {
-    const values: DataSeries[] = this.values.map((v) => {
-      return v.data();
-    });
-    const columns: string[] = [...this.columns];
-    const index: string[] = [...this.index];
-    return new DataTable(values, columns, index);
-  }
+  // /**
+  //  * @method {df}
+  //  * @description Returns a copy of the DataTable
+  //  * @returns {DataTable} - A copy of the DataTable
+  //  */
+  // df(): DataTable {
+  //   const values: DataSeries[] = this.values.map((v) => {
+  //     return v.data();
+  //   }); const columns: string[] = [...this.columns];
+  //   const index: any[] | null | undefined = this.index;
+  //   return new DataTable(values, columns, index);
+  // }
 
   /**
    * @method {at}
@@ -335,30 +336,49 @@ class DataTable {
   //   return new DataTable(values, this.columns, this.index);
   // }
 
-  transpose() {
-    // Returns a transposed version of the DataTable
-    const index = this.columns;
-    const columns = this.index;
-    const curValues = this.values;
-    const newShape: number[] = [this.nRows, this.nCols];
-    const newValues: any[] = [];
-    for (let i = 0; i < newShape[0]; i++) {
-      newValues.push([]);
-    }
-    curValues.forEach((v) => {
-      for (let i = 0; i < v.length; i++) {
-        newValues[i].push(v[i]);
-      }
+  // transpose() {
+  //   // Returns a transposed version of the DataTable
+  //   const index = this.columns;
+  //   const columns = this.index;
+  //   const curValues = this.values;
+  //   const newShape: number[] = [this.nRows, this.nCols];
+  //   const newValues: any[] = [];
+  //   for (let i = 0; i < newShape[0]; i++) {
+  //     newValues.push([]);
+  //   }
+  //   curValues.forEach((v) => {
+  //     for (let i = 0; i < v.length; i++) {
+  //       newValues[i].push(v[i]);
+  //     }
+  //   });
+  //   const newVals2 = newValues.map((v) => new DataSeries(v));
+
+  //   return new DataTable(newVals2, columns, index);
+  // }
+
+  // mapColumns(func) {
+  //   // Returns a mapped version of the DataTable
+  //   const values = this.values.map((v) => v.map(func));
+  //   return new DataTable(values, this.columns, this.index);
+  // }
+
+  static buildData(keys: string[], data: any) {
+    let outData: any = [];
+    keys.forEach((key: string, i: number) => {
+      let dataArr: any[] = [];
+      data.forEach((datum: any) => {
+        // Ensure the key exists in the datum and push its value
+        if (datum.hasOwnProperty(key)) {
+          dataArr.push(datum[key]);
+        }
+      });
+      let ds = new DataSeries({ values: dataArr, name: key });
+      outData.push(ds);
     });
-    const newVals2 = newValues.map((v) => new DataSeries(v));
 
-    return new DataTable(newVals2, columns, index);
-  }
+    let outData2 = new DataTable(outData);
 
-  mapColumns(func) {
-    // Returns a mapped version of the DataTable
-    const values = this.values.map((v) => v.map(func));
-    return new DataTable(values, this.columns, this.index);
+    return outData2;
   }
 
   // split(nChunks = 2, output = 'json', saveFile = '') {

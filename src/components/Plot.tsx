@@ -6,13 +6,15 @@ const Plot = ({
   dt,
   x,
   y,
-  plotName = '',
+  name = '',
   width = 750,
   height = 500,
   element = PlotAPI.SVG,
   ...props
 }) => {
-  const plotID = `${`${plotName}${plotName !== '' ? '-' : ''}`}${dt}-${x}-${y}`;
+  const plotID = `${`${name}${
+    name !== '' ? '-plot-' : 'plot-'
+  }`}${dt}-${x}-${y}`;
   return (
     <div
       className={`
